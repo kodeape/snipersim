@@ -839,9 +839,9 @@ SubsecondTime RobTimer::doIssue()
 
       if (m_rob_contention)
       {
-         if (m_rob_contention->noMore()) {
+         /*if (m_rob_contention->noMore()) {
             break;
-         }
+         }*/
       }
       else
       {
