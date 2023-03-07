@@ -83,6 +83,9 @@ private:
    UInt64 m_uops_x87;
    UInt64 m_uops_pause;
 
+   UInt64 m_numContentionBlocks;
+   UInt64 m_numContentionCycles;
+
    uint64_t m_numICacheOverlapped;
    uint64_t m_numBPredOverlapped;
    uint64_t m_numDCacheOverlapped;

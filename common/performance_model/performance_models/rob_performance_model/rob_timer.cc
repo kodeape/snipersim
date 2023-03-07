@@ -76,6 +76,11 @@ RobTimer::RobTimer(
    registerStatsMetric("rob_timer", core->getId(), "uops_x87", &m_uops_x87);
    registerStatsMetric("rob_timer", core->getId(), "uops_pause", &m_uops_pause);
 
+   m_numContentionBlocks = 0;
+   m_numContentionCycles = 0;
+   registerStatsMetric("rob_timer", core->getId(), "numContentionBlocks", &m_numContentionBlocks);
+   registerStatsMetric("rob_timer", core->getId(), "numContentionCycles", &m_numContentionCycles);
+
    m_numSerializationInsns = 0;
    m_totalSerializationLatency = 0;
 
@@ -711,7 +716,7 @@ SubsecondTime RobTimer::doIssue()
 {
    uint64_t num_issued = 0;
    SubsecondTime next_event = SubsecondTime::MaxTime();
-   bool head_of_queue = true, no_more_load = false, no_more_store = false, have_unresolved_store = false;
+   bool head_of_queue = true, no_more_load = false, no_more_store = false, have_unresolved_store = false, contention_this_cycle = false;
 
    if (m_rob_contention)
       m_rob_contention->initCycle(now);
@@ -776,8 +781,14 @@ SubsecondTime RobTimer::doIssue()
 
 
       // canIssue already marks issue ports as in use, so do this one last
-      if (canIssue && m_rob_contention && ! m_rob_contention->tryIssue(*uop))
+      if (canIssue && m_rob_contention && ! m_rob_contention->tryIssue(*uop)){
          canIssue = false;          // blocked by structural hazard
+         m_numContentionBlocks++;
+         if (!contention_this_cycle) {
+            m_numContentionCycles++;
+            contention_this_cycle = true;
+         }
+      }
 
 
       if (canIssue)
@@ -828,8 +839,9 @@ SubsecondTime RobTimer::doIssue()
 
       if (m_rob_contention)
       {
-         if (m_rob_contention->noMore())
+         if (m_rob_contention->noMore()) {
             break;
+         }
       }
       else
       {
