@@ -12,6 +12,6 @@ for folder in $SUBFOLDERS; do
   job_name=$(basename $folder)
 
   # Run the slurm script with the job name, max time, and command
-  ./slurm-submit.sh $job_name 02:00:00 "./run-sniper -c rakesh.cfg -c robOoO_000_NoQ_256ROB.cfg --traces=$DIRECTORY/$job_name/${job_name}_trace.sift"
+  ./slurm-submit.sh $job_name 02:00:00 "./run-sniper -c rakesh.cfg -c robOoO_000_NoQ_256ROB.cfg -d $DIRECTORY/$job_name --traces=$DIRECTORY/$job_name/${job_name}_trace.sift"
 
 done
