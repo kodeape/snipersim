@@ -2,7 +2,7 @@
 
 import sys, os, json, sniper_lib
 
-WORKLOADS_DIRECTORY = "/home/vivoape/master_project/sniper_traces/spec_cpu2017_reference_w0_d1B/"
+WORKLOADS_DIRECTORY = "/cluster/home/sarargh/sniper_traces/spec_cpu2017_reference_w0_d1B/"
 
 METRICS = (
     'performance_model.cycle_count',
