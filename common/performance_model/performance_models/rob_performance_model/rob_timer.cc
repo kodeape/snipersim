@@ -714,8 +714,26 @@ void RobTimer::issueInstruction(uint64_t idx, SubsecondTime &next_event)
 
 SubsecondTime RobTimer::doIssue()
 {
-   uint64_t num_issued = 0;
    SubsecondTime next_event = SubsecondTime::MaxTime();
+   readyList.clear();
+   auto lastReady = readyList.cbefore_begin();
+
+   for(uint64_t i = 0; i < m_num_in_rob; ++i)
+   {
+      RobEntry *entry = &rob.at(i);
+      DynamicMicroOp *uop = entry->uop;
+
+
+      if (entry->done != SubsecondTime::MaxTime())
+      {
+         next_event = std::min(next_event, entry->done);
+         continue;                     // already done
+      }
+
+      next_event = std::min(next_event, entry->ready);
+   }
+
+   uint64_t num_issued = 0;
    bool head_of_queue = true, no_more_load = false, no_more_store = false, have_unresolved_store = false, contention_this_cycle = false;
 
    if (m_rob_contention)

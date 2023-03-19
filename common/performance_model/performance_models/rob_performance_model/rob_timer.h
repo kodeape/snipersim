@@ -10,6 +10,7 @@
 #include "stats.h"
 
 #include <deque>
+#include <forward_list>
 
 class RobTimer
 {
@@ -132,6 +133,8 @@ private:
    std::vector<SubsecondTime> m_cpiDataCache;
 
    SubsecondTime *m_cpiCurrentFrontEndStall;
+
+   std::forward_list<RobEntry*> readyList;
 
    const bool m_mlp_histogram;
    static const unsigned int MAX_OUTSTANDING = 32;
