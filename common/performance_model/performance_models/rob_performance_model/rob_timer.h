@@ -9,8 +9,8 @@
 #include "rob_contention.h"
 #include "stats.h"
 
-#include <deque>
-#include <forward_list>
+//#include <deque>
+#include <list>
 
 class RobTimer
 {
@@ -134,7 +134,8 @@ private:
 
    SubsecondTime *m_cpiCurrentFrontEndStall;
 
-   std::forward_list<RobEntry*> readyList;
+   // ROB indexes of all instructions that are available to issue this cycle, sorted from highest priority to lowest priority
+   std::list<uint64_t> readyList;
 
    const bool m_mlp_histogram;
    static const unsigned int MAX_OUTSTANDING = 32;

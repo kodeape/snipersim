@@ -715,29 +715,9 @@ void RobTimer::issueInstruction(uint64_t idx, SubsecondTime &next_event)
 SubsecondTime RobTimer::doIssue()
 {
    SubsecondTime next_event = SubsecondTime::MaxTime();
+   bool head_of_queue = true, no_more_load = false, no_more_store = false, have_unresolved_store = false;
+
    readyList.clear();
-   auto lastReady = readyList.cbefore_begin();
-
-   for(uint64_t i = 0; i < m_num_in_rob; ++i)
-   {
-      RobEntry *entry = &rob.at(i);
-      DynamicMicroOp *uop = entry->uop;
-
-
-      if (entry->done != SubsecondTime::MaxTime())
-      {
-         next_event = std::min(next_event, entry->done);
-         continue;                     // already done
-      }
-
-      next_event = std::min(next_event, entry->ready);
-   }
-
-   uint64_t num_issued = 0;
-   bool head_of_queue = true, no_more_load = false, no_more_store = false, have_unresolved_store = false, contention_this_cycle = false;
-
-   if (m_rob_contention)
-      m_rob_contention->initCycle(now);
 
    for(uint64_t i = 0; i < m_num_in_rob; ++i)
    {
@@ -782,9 +762,6 @@ SubsecondTime RobTimer::doIssue()
             // FIXME: L/SFENCE
       }
 
-      else if (!m_rob_contention && num_issued == dispatchWidth)
-         canIssue = false;          // no issue contention: issue width == dispatch width
-
       else if (uop->getMicroOp()->isLoad() && !load_queue.hasFreeSlot(now))
          canIssue = false;          // load queue full
 
@@ -798,50 +775,9 @@ SubsecondTime RobTimer::doIssue()
          canIssue = true;           // issue!
 
 
-      // canIssue already marks issue ports as in use, so do this one last
-      if (canIssue && m_rob_contention && ! m_rob_contention->tryIssue(*uop)){
-         canIssue = false;          // blocked by structural hazard
-         m_numContentionBlocks++;
-         if (!contention_this_cycle) {
-            m_numContentionCycles++;
-            contention_this_cycle = true;
-         }
-      }
+      // TODO: insert with priority sorting
+      if (canIssue) readyList.push_back(i);
 
-
-      if (canIssue)
-      {
-         num_issued++;
-         issueInstruction(i, next_event);
-
-         // Calculate memory-level parallelism (MLP) for long-latency loads (but ignore overlapped misses)
-         if (uop->getMicroOp()->isLoad() && uop->isLongLatencyLoad() && uop->getDCacheHitWhere() != HitWhere::L1_OWN)
-         {
-            if (m_lastAccountedMemoryCycle < now) m_lastAccountedMemoryCycle = now;
-
-            SubsecondTime done = std::max( now.getElapsedTime(), entry->done );
-            // Ins will be outstanding for until it is done. By account beforehand I don't need to
-            // worry about fast-forwarding simulations
-            m_outstandingLongLatencyInsns += (done - now);
-
-            // Only account for the cycles that have not yet been accounted for by other long
-            // latency misses (don't account cycles twice).
-            if ( done > m_lastAccountedMemoryCycle )
-            {
-               m_outstandingLongLatencyCycles += done - m_lastAccountedMemoryCycle;
-               m_lastAccountedMemoryCycle = done;
-            }
-
-            #ifdef ASSERT_SKIP
-            LOG_ASSERT_ERROR( m_outstandingLongLatencyInsns >= m_outstandingLongLatencyCycles, "MLP calculation is wrong: MLP cannot be < 1!"  );
-            #endif
-         }
-
-
-         #ifdef ASSERT_SKIP
-            LOG_ASSERT_ERROR(will_skip == false, "Cycle would have been skipped but stuff happened");
-         #endif
-      }
       else
       {
          head_of_queue = false;     // Subsequent instructions are not at the head of the ROB
@@ -849,23 +785,68 @@ SubsecondTime RobTimer::doIssue()
          if (uop->getMicroOp()->isStore() && entry->addressReady > now)
             have_unresolved_store = true;
 
-         if (inorder)
+         // NOTE: In-order execution is broken with this version
+         /*if (inorder)
             // In-order: only issue from head of the ROB
-            break;
+            break;*/
+      }
+   }
+
+   uint64_t num_issued = 0;
+   bool contention_this_cycle = false;
+
+   if (m_rob_contention)
+      m_rob_contention->initCycle(now);
+
+   for(std::list<uint64_t>::const_iterator ready_it = readyList.cbegin(); ready_it != readyList.cend(); ready_it++)
+   {
+      RobEntry *entry = &rob.at(*ready_it);
+      DynamicMicroOp *uop = entry->uop;
+
+      // Check for contention (without or with contention model)
+      if ((!m_rob_contention && num_issued == dispatchWidth) ||
+         (m_rob_contention && ! m_rob_contention->tryIssue(*uop)))
+      {
+         m_numContentionBlocks++;
+         if (!contention_this_cycle) {
+            m_numContentionCycles++;
+            contention_this_cycle = true;
+         }
+         continue;
       }
 
 
-      if (m_rob_contention)
+      num_issued++;
+      issueInstruction(*ready_it, next_event);
+
+      // Calculate memory-level parallelism (MLP) for long-latency loads (but ignore overlapped misses)
+      if (uop->getMicroOp()->isLoad() && uop->isLongLatencyLoad() && uop->getDCacheHitWhere() != HitWhere::L1_OWN)
       {
-         /*if (m_rob_contention->noMore()) {
-            break;
-         }*/
+         if (m_lastAccountedMemoryCycle < now) m_lastAccountedMemoryCycle = now;
+
+         SubsecondTime done = std::max( now.getElapsedTime(), entry->done );
+         // Ins will be outstanding for until it is done. By account beforehand I don't need to
+         // worry about fast-forwarding simulations
+         m_outstandingLongLatencyInsns += (done - now);
+
+         // Only account for the cycles that have not yet been accounted for by other long
+         // latency misses (don't account cycles twice).
+         if ( done > m_lastAccountedMemoryCycle )
+         {
+            m_outstandingLongLatencyCycles += done - m_lastAccountedMemoryCycle;
+            m_lastAccountedMemoryCycle = done;
+         }
+
+         #ifdef ASSERT_SKIP
+         LOG_ASSERT_ERROR( m_outstandingLongLatencyInsns >= m_outstandingLongLatencyCycles, "MLP calculation is wrong: MLP cannot be < 1!"  );
+         #endif
       }
-      else
-      {
-         if (num_issued == dispatchWidth)
-            break;
-      }
+
+
+      #ifdef ASSERT_SKIP
+         LOG_ASSERT_ERROR(will_skip == false, "Cycle would have been skipped but stuff happened");
+      #endif
+
    }
 
    return next_event;
