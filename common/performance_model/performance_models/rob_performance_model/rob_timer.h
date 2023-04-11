@@ -5,12 +5,11 @@
 #ifndef ROBTIMER_HPP_
 #define ROBTIMER_HPP_
 
+#include <list>
+
 #include "interval_timer.h"
 #include "rob_contention.h"
 #include "stats.h"
-
-//#include <deque>
-#include <list>
 
 class RobTimer
 {

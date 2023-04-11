@@ -782,14 +782,14 @@ SubsecondTime RobTimer::doIssue()
       {
          head_of_queue = false;     // Subsequent instructions are not at the head of the ROB
 
-         if (uop->getMicroOp()->isStore() && entry->addressReady > now)
-            have_unresolved_store = true;
-
          // NOTE: In-order execution is broken with this version
          /*if (inorder)
             // In-order: only issue from head of the ROB
             break;*/
       }
+
+      if (uop->getMicroOp()->isStore() && entry->addressReady > now)
+         have_unresolved_store = true;
    }
 
    uint64_t num_issued = 0;
