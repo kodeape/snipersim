@@ -516,6 +516,11 @@ SubsecondTime RobTimer::doDispatch(SubsecondTime **cpiComponent)
          if (uop.isLast())
             instrs_dispatched++;
 
+         if (uop.getMicroOp()->isSerializing())
+            m_numSerializationInsns++;
+         if (uop.getMicroOp()->isMemBarrier())
+            m_numMfenceInsns++;
+
          // If uop is already ready, we may need to issue it in the following cycle
          entry->ready = std::max(entry->ready, (now + 1ul).getElapsedTime());
          next_event = std::min(next_event, entry->ready);
