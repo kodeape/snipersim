@@ -390,6 +390,8 @@ boost::tuple<uint64_t,SubsecondTime> RobTimer::simulate(const std::vector<Dynami
       m_uops_total++;
       if ((*it)->getMicroOp()->isX87()) m_uops_x87++;
       if ((*it)->getMicroOp()->isPause()) m_uops_pause++;
+      if ((*it)->getMicroOp()->isSerializing()) m_numSerializationInsns++;
+      if ((*it)->getMicroOp()->isMemBarrier()) m_numMfenceInsns++;
 
       if (m_uops_total > 10000 && m_uops_x87 > m_uops_total / 20)
          LOG_PRINT_WARNING_ONCE("Significant fraction of x87 instructions encountered, accuracy will be low. Compile without -mno-sse2 -mno-sse3 to avoid.");
@@ -515,11 +517,6 @@ SubsecondTime RobTimer::doDispatch(SubsecondTime **cpiComponent)
          uops_dispatched++;
          if (uop.isLast())
             instrs_dispatched++;
-
-         if (uop.getMicroOp()->isSerializing())
-            m_numSerializationInsns++;
-         if (uop.getMicroOp()->isMemBarrier())
-            m_numMfenceInsns++;
 
          // If uop is already ready, we may need to issue it in the following cycle
          entry->ready = std::max(entry->ready, (now + 1ul).getElapsedTime());
