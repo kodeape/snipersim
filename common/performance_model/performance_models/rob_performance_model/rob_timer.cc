@@ -201,6 +201,8 @@ void RobTimer::RobEntry::init(DynamicMicroOp *_uop, UInt64 sequenceNumber)
 
    numInlineDependants = 0;
    vectorDependants = NULL;
+
+   priority = 0;
 }
 
 void RobTimer::RobEntry::free()
@@ -714,6 +716,22 @@ void RobTimer::issueInstruction(uint64_t idx, SubsecondTime &next_event)
    }
 }
 
+// TODO: Make PriorityList class with this as insert function, and with priority as a separate argument
+void RobTimer::insertPrioritized(uint64_t robIdx)
+{
+   uint64_t priority = rob.at(robIdx).priority;
+   // This check is not necessary, it's just an optimization for the common case of inserting lowest-priority entries
+   if (readyList.empty() || priority <= rob.at(readyList.back()).priority) readyList.push_back(robIdx);
+   else
+   {
+      std::list<uint64_t>::const_iterator ready_it = readyList.cbegin();
+      // ready_it should never be able to reach readyList.cend() here due to the check above, but I include the check just to be super safe
+      while (ready_it != readyList.cend() && priority <= rob.at(*ready_it).priority) ready_it++;
+      readyList.insert(ready_it, robIdx);
+      
+   }
+}
+
 SubsecondTime RobTimer::doIssue()
 {
    SubsecondTime next_event = SubsecondTime::MaxTime();
@@ -777,8 +795,7 @@ SubsecondTime RobTimer::doIssue()
          canIssue = true;           // issue!
 
 
-      // TODO: insert with priority sorting
-      if (canIssue) readyList.push_back(i);
+      if (canIssue) insertPrioritized(i);
 
       else
       {

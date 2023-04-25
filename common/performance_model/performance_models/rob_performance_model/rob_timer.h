@@ -43,6 +43,8 @@ private:
          SubsecondTime addressReadyMax;
          SubsecondTime issued;
          SubsecondTime done;
+
+         uint64_t priority;
    };
 
    const uint64_t dispatchWidth;
@@ -133,8 +135,10 @@ private:
 
    SubsecondTime *m_cpiCurrentFrontEndStall;
 
+   // TODO: Make PriorityList class
    // ROB indexes of all instructions that are available to issue this cycle, sorted from highest priority to lowest priority
    std::list<uint64_t> readyList;
+   void insertPrioritized(uint64_t robIdx);
 
    const bool m_mlp_histogram;
    static const unsigned int MAX_OUTSTANDING = 32;
