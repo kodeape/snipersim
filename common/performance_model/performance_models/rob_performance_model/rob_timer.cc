@@ -716,6 +716,20 @@ void RobTimer::issueInstruction(uint64_t idx, SubsecondTime &next_event)
    }
 }
 
+void RobTimer::prioritizeProds(RobEntry *entry, uint64_t priority, bool backprop)
+{
+   for(unsigned int i = 0; i < (entry->uop->getMicroOp()->isStore() ? entry->getNumAddressProducers() : entry->uop->getDependenciesLength()); ++i)
+   {
+      RobEntry *prodEntry = this->findEntryBySequenceNumber(entry->uop->getMicroOp()->isStore() ? entry->getAddressProducer(i) : entry->uop->getDependency(i));
+
+      if (prodEntry->priority < priority)
+         prodEntry->priority = priority;
+
+      if (backprop)
+         prioritizeProds(prodEntry, priority, backprop);
+   }
+}
+
 // TODO: Make PriorityList class with this as insert function, and with priority as a separate argument
 void RobTimer::insertPrioritized(uint64_t robIdx)
 {

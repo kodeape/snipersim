@@ -139,6 +139,7 @@ private:
    // ROB indexes of all instructions that are available to issue this cycle, sorted from highest priority to lowest priority
    std::list<uint64_t> readyList;
    void insertPrioritized(uint64_t robIdx);
+   void prioritizeProds(RobEntry *entry, uint64_t priority, bool backprop);
 
    const bool m_mlp_histogram;
    static const unsigned int MAX_OUTSTANDING = 32;
