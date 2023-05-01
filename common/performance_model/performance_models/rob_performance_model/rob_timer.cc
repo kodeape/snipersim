@@ -524,6 +524,12 @@ SubsecondTime RobTimer::doDispatch(SubsecondTime **cpiComponent)
          entry->ready = std::max(entry->ready, (now + 1ul).getElapsedTime());
          next_event = std::min(next_event, entry->ready);
 
+         if (uop.getMicroOp()->isLoad())
+         {
+            entry->priority = 1;
+            prioritizeProds(entry, 1, true);
+         }
+
          #ifdef DEBUG_PERCYCLE
             std::cout<<"DISPATCH "<<entry->uop->getMicroOp()->toShortString()<<std::endl;
          #endif
@@ -722,11 +728,13 @@ void RobTimer::prioritizeProds(RobEntry *entry, uint64_t priority, bool backprop
    {
       RobEntry *prodEntry = this->findEntryBySequenceNumber(entry->uop->getMicroOp()->isStore() ? entry->getAddressProducer(i) : entry->uop->getDependency(i));
 
-      if (prodEntry->priority < priority)
+      if (prodEntry->priority==0 && prodEntry->done == SubsecondTime::MaxTime() && !prodEntry->uop->getMicroOp()->isStore())
+      {
          prodEntry->priority = priority;
 
-      if (backprop)
-         prioritizeProds(prodEntry, priority, backprop);
+         if (backprop)
+            prioritizeProds(prodEntry, priority, backprop);
+      }
    }
 }
 
@@ -766,7 +774,6 @@ SubsecondTime RobTimer::doIssue()
       }
 
       next_event = std::min(next_event, entry->ready);
-
 
       // See if we can issue this instruction
 
