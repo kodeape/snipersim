@@ -141,6 +141,10 @@ private:
    void insertPrioritized(uint64_t robIdx);
    void prioritizeProds(RobEntry *entry, uint64_t priority, bool backprop);
 
+   // TODO: Make (log2 of) buffer size configurable
+   // PC-indexed (16 bits, but untagged) criticality prediction table
+   uint8_t criticalityBuffer[65536];
+
    const bool m_mlp_histogram;
    static const unsigned int MAX_OUTSTANDING = 32;
    std::vector<std::vector<SubsecondTime> > m_outstandingLoads;

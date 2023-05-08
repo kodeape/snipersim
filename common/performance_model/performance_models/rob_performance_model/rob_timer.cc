@@ -177,6 +177,11 @@ RobTimer::RobTimer(
       }
    }
 
+   for (unsigned int i = 0; i < 65536; i++)
+   {
+      criticalityBuffer[i] = 0;
+   }
+
 }
 
 RobTimer::~RobTimer()
@@ -894,6 +899,9 @@ SubsecondTime RobTimer::doIssue()
 
 SubsecondTime RobTimer::doCommit(uint64_t& instructionsExecuted)
 {
+
+   
+
    uint64_t num_committed = 0;
 
    while(rob.size() && (rob.front().done <= now))
