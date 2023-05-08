@@ -182,6 +182,8 @@ RobTimer::RobTimer(
       criticalityBuffer[i] = 0;
    }
 
+   becameFrontAtCycle = 0;
+   cbIdx = 0;
 }
 
 RobTimer::~RobTimer()
@@ -529,10 +531,10 @@ SubsecondTime RobTimer::doDispatch(SubsecondTime **cpiComponent)
          entry->ready = std::max(entry->ready, (now + 1ul).getElapsedTime());
          next_event = std::min(next_event, entry->ready);
 
-         if (uop.getMicroOp()->isLoad())
+         if (uop.getMicroOp()->getInstruction())
          {
-            entry->priority = 1;
-            prioritizeProds(entry, 1, true);
+            uint64_t eip = uop.getMicroOp()->getInstruction()->getAddress();
+            entry->priority = criticalityBuffer[eip>>48];
          }
 
          #ifdef DEBUG_PERCYCLE
@@ -935,6 +937,24 @@ SubsecondTime RobTimer::doCommit(uint64_t& instructionsExecuted)
       ++num_committed;
       if (num_committed == commitWidth)
          break;
+   }
+
+   if (num_committed > 0)
+   {
+      if (becameFrontAtCycle != 0)
+         criticalityBuffer[cbIdx] = now.getCycleCount() - becameFrontAtCycle;
+      
+      if (rob.size() > 0 && rob.front().uop->getMicroOp()->getInstruction())
+      {
+         uint64_t eip = rob.front().uop->getMicroOp()->getInstruction()->getAddress();
+         cbIdx = eip >> 48;
+         becameFrontAtCycle = now.getCycleCount();
+      }
+      else
+      {
+         cbIdx = 0;
+         becameFrontAtCycle = 0;
+      }
    }
 
    if (rob.size())
