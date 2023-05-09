@@ -941,15 +941,21 @@ SubsecondTime RobTimer::doCommit(uint64_t& instructionsExecuted)
 
    if (num_committed > 0)
    {
+      // Previous front of ROB is now committed, if it was an instruction we had registered we must update its CB entry
       if (becameFrontAtCycle != 0)
-         criticalityBuffer[cbIdx] = now.getCycleCount() - becameFrontAtCycle;
+      {
+         uint64_t commitStallCycles = now.getCycleCount() - becameFrontAtCycle;
+         criticalityBuffer[cbIdx] = (criticalityBuffer[cbIdx] > commitStallCycles) ? criticalityBuffer[cbIdx]-1 : commitStallCycles;
+      }
       
+      // If the new front of ROB is an instruction, we must save its CB index and the current cycle count
       if (rob.size() > 0 && rob.front().uop->getMicroOp()->getInstruction())
       {
          uint64_t eip = rob.front().uop->getMicroOp()->getInstruction()->getAddress();
          cbIdx = eip & (CB_LENGTH-1);
          becameFrontAtCycle = now.getCycleCount();
       }
+      // If the new front of ROB isn't an instruction, we set becameFrontAtCycle to 0 to indicate that current cbIdx isn't valid
       else
       {
          cbIdx = 0;
