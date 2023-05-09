@@ -177,7 +177,7 @@ RobTimer::RobTimer(
       }
    }
 
-   for (unsigned int i = 0; i < 65536; i++)
+   for (unsigned int i = 0; i < CB_LENGTH; i++)
    {
       criticalityBuffer[i] = 0;
    }
@@ -534,7 +534,7 @@ SubsecondTime RobTimer::doDispatch(SubsecondTime **cpiComponent)
          if (uop.getMicroOp()->getInstruction())
          {
             uint64_t eip = uop.getMicroOp()->getInstruction()->getAddress();
-            entry->priority = criticalityBuffer[eip>>48];
+            entry->priority = criticalityBuffer[eip & (CB_LENGTH-1)];
          }
 
          #ifdef DEBUG_PERCYCLE
@@ -947,7 +947,7 @@ SubsecondTime RobTimer::doCommit(uint64_t& instructionsExecuted)
       if (rob.size() > 0 && rob.front().uop->getMicroOp()->getInstruction())
       {
          uint64_t eip = rob.front().uop->getMicroOp()->getInstruction()->getAddress();
-         cbIdx = eip >> 48;
+         cbIdx = eip & (CB_LENGTH-1);
          becameFrontAtCycle = now.getCycleCount();
       }
       else

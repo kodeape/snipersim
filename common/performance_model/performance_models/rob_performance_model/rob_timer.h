@@ -11,6 +11,8 @@
 #include "rob_contention.h"
 #include "stats.h"
 
+#define CB_LENGTH 65536
+
 class RobTimer
 {
 private:
@@ -143,7 +145,7 @@ private:
 
    // TODO: Make (log2 of) buffer size configurable
    // PC-indexed (16 bits, but untagged) criticality prediction table
-   uint64_t criticalityBuffer[65536];
+   uint64_t criticalityBuffer[CB_LENGTH];
    uint64_t becameFrontAtCycle;
    uint64_t cbIdx;
 
