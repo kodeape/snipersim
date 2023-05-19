@@ -180,10 +180,12 @@ RobTimer::RobTimer(
    for (unsigned int i = 0; i < CB_LENGTH; i++)
    {
       criticalityBuffer[i] = 0;
+      criticalityBufferTags[i] = 0;
    }
 
    becameFrontAtCycle = 0;
-   cbIdx = 0;
+   frontEip = 0;
+   //cbIdx = 0;
 }
 
 RobTimer::~RobTimer()
@@ -534,7 +536,9 @@ SubsecondTime RobTimer::doDispatch(SubsecondTime **cpiComponent)
          if (uop.getMicroOp()->getInstruction())
          {
             uint64_t eip = uop.getMicroOp()->getInstruction()->getAddress();
-            entry->priority = criticalityBuffer[eip & (CB_LENGTH-1)];
+            uint64_t cbIdx = eip & (CB_LENGTH-1);
+            if (criticalityBufferTags[cbIdx] == eip >> CB_BITS)
+               entry->priority = criticalityBuffer[cbIdx];
          }
 
          #ifdef DEBUG_PERCYCLE
@@ -945,20 +949,26 @@ SubsecondTime RobTimer::doCommit(uint64_t& instructionsExecuted)
       if (becameFrontAtCycle != 0)
       {
          uint64_t commitStallCycles = now.getCycleCount() - becameFrontAtCycle;
-         criticalityBuffer[cbIdx] = (criticalityBuffer[cbIdx] > commitStallCycles) ? criticalityBuffer[cbIdx]-1 : commitStallCycles;
+         uint64_t cbIdx = frontEip & (CB_LENGTH-1);
+         criticalityBuffer[cbIdx] = commitStallCycles;
+         criticalityBufferTags[cbIdx] = frontEip >> CB_BITS;
+         //criticalityBuffer[cbIdx] = (criticalityBuffer[cbIdx] > commitStallCycles) ? criticalityBuffer[cbIdx]-1 : commitStallCycles;
+
       }
       
       // If the new front of ROB is an instruction, we must save its CB index and the current cycle count
       if (rob.size() > 0 && rob.front().uop->getMicroOp()->getInstruction())
       {
          uint64_t eip = rob.front().uop->getMicroOp()->getInstruction()->getAddress();
-         cbIdx = eip & (CB_LENGTH-1);
+         //cbIdx = eip & (CB_LENGTH-1);
+         frontEip = eip;
          becameFrontAtCycle = now.getCycleCount();
       }
       // If the new front of ROB isn't an instruction, we set becameFrontAtCycle to 0 to indicate that current cbIdx isn't valid
       else
       {
-         cbIdx = 0;
+         //cbIdx = 0;
+         frontEip = 0;
          becameFrontAtCycle = 0;
       }
    }

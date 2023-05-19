@@ -11,7 +11,8 @@
 #include "rob_contention.h"
 #include "stats.h"
 
-#define CB_LENGTH 65536
+#define CB_BITS   16
+#define CB_LENGTH 65536  // 2^CB_BITS
 
 class RobTimer
 {
@@ -144,10 +145,12 @@ private:
    void prioritizeProds(RobEntry *entry, uint64_t priority, bool backprop);
 
    // TODO: Make (log2 of) buffer size configurable
-   // PC-indexed (16 bits, but untagged) criticality prediction table
+   // PC-indexed (16 bits) criticality prediction table
    uint64_t criticalityBuffer[CB_LENGTH];
+   uint64_t criticalityBufferTags[CB_LENGTH];
    uint64_t becameFrontAtCycle;
-   uint64_t cbIdx;
+   uint64_t frontEip;
+   //uint64_t cbIdx;
 
    const bool m_mlp_histogram;
    static const unsigned int MAX_OUTSTANDING = 32;
