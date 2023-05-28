@@ -538,8 +538,21 @@ SubsecondTime RobTimer::doDispatch(SubsecondTime **cpiComponent)
             uint64_t eip = uop.getMicroOp()->getInstruction()->getAddress();
             uint64_t cbIdx = eip & (CB_LENGTH-1);
             if (criticalityBufferTags[cbIdx] == eip >> CB_BITS)
+            {
                entry->priority = criticalityBuffer[cbIdx];
+               prioritizeProds(entry, entry->priority, true);
+            }
          }
+
+         /*for(unsigned int i = 0; i < (uop.getMicroOp()->isStore() ? entry->getNumAddressProducers() : uop.getDependenciesLength()); ++i)
+         {
+            RobEntry *prodEntry = this->findEntryBySequenceNumber(uop.getMicroOp()->isStore() ? entry->getAddressProducer(i) : uop.getDependency(i));
+
+            if (prodEntry->uop->getMicroOp()->getInstruction() && !prodEntry->uop->getMicroOp()->isStore())
+            {
+               entry->prodEips.push_back(prodEntry->uop->getMicroOp()->getInstruction()->getAddress());
+            }
+         }*/
 
          #ifdef DEBUG_PERCYCLE
             std::cout<<"DISPATCH "<<entry->uop->getMicroOp()->toShortString()<<std::endl;
@@ -737,9 +750,18 @@ void RobTimer::prioritizeProds(RobEntry *entry, uint64_t priority, bool backprop
 {
    for(unsigned int i = 0; i < (entry->uop->getMicroOp()->isStore() ? entry->getNumAddressProducers() : entry->uop->getDependenciesLength()); ++i)
    {
-      RobEntry *prodEntry = this->findEntryBySequenceNumber(entry->uop->getMicroOp()->isStore() ? entry->getAddressProducer(i) : entry->uop->getDependency(i));
+      RobEntry *prodEntry;
+      if (entry->uop->getMicroOp()->isStore())
+      {
+         uint64_t addressProducer = entry->getAddressProducer(i);
+         if (addressProducer < this->rob.front().uop->getSequenceNumber())
+            continue;
+         prodEntry = this->findEntryBySequenceNumber(addressProducer);
+      }
+      else
+         prodEntry = this->findEntryBySequenceNumber(entry->uop->getDependency(i));
 
-      if (prodEntry->priority==0 && prodEntry->done == SubsecondTime::MaxTime() && !prodEntry->uop->getMicroOp()->isStore())
+      if (prodEntry->priority < priority && prodEntry->done == SubsecondTime::MaxTime())
       {
          prodEntry->priority = priority;
 
@@ -906,7 +928,20 @@ SubsecondTime RobTimer::doIssue()
 SubsecondTime RobTimer::doCommit(uint64_t& instructionsExecuted)
 {
 
-   
+   // If the current ROB front is committing this cycle, we need to update the CB
+   /*if (rob.size() && (rob.front().done <= now) && (rob.front().uop->getMicroOp()->getInstruction()) && (becameFrontAtCycle != 0))
+   {
+      uint64_t eip = rob.front().uop->getMicroOp()->getInstruction()->getAddress();
+      uint64_t commitStallCycles = now.getCycleCount() - becameFrontAtCycle;
+      uint64_t cbIdx = eip & (CB_LENGTH-1);
+      criticalityBuffer[cbIdx] = commitStallCycles;
+      criticalityBufferTags[cbIdx] = eip >> CB_BITS;
+      for (auto prodEip_it = rob.front().prodEips.cbegin(); prodEip_it != rob.front().prodEips.cend(); ++prodEip_it)
+      {
+         if ()
+      }
+      //criticalityBuffer[cbIdx] = (criticalityBuffer[cbIdx] > commitStallCycles) ? criticalityBuffer[cbIdx]-1 : commitStallCycles;
+   }*/
 
    uint64_t num_committed = 0;
 

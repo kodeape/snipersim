@@ -48,6 +48,7 @@ private:
          SubsecondTime done;
 
          uint64_t priority;
+         //std::vector<uint64_t> prodEips;
    };
 
    const uint64_t dispatchWidth;
