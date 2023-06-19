@@ -985,8 +985,14 @@ SubsecondTime RobTimer::doCommit(uint64_t& instructionsExecuted)
       {
          uint64_t commitStallCycles = now.getCycleCount() - becameFrontAtCycle;
          uint64_t cbIdx = frontEip & (CB_LENGTH-1);
-         criticalityBuffer[cbIdx] = commitStallCycles;
-         criticalityBufferTags[cbIdx] = frontEip >> CB_BITS;
+         uint64_t cbTag = frontEip >> CB_BITS;
+         if (criticalityBufferTags[cbIdx] == cbTag && criticalityBuffer[cbIdx] > commitStallCycles)
+            criticalityBuffer[cbIdx] = criticalityBuffer[cbIdx]-1;
+         else
+            criticalityBuffer[cbIdx] = commitStallCycles;
+         criticalityBufferTags[cbIdx] = cbTag;
+         //criticalityBuffer[cbIdx] = commitStallCycles;
+         //criticalityBufferTags[cbIdx] = frontEip >> CB_BITS;
          //criticalityBuffer[cbIdx] = (criticalityBuffer[cbIdx] > commitStallCycles) ? criticalityBuffer[cbIdx]-1 : commitStallCycles;
 
       }
