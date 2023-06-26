@@ -537,22 +537,13 @@ SubsecondTime RobTimer::doDispatch(SubsecondTime **cpiComponent)
          {
             uint64_t eip = uop.getMicroOp()->getInstruction()->getAddress();
             uint64_t cbIdx = eip & (CB_LENGTH-1);
-            if (criticalityBufferTags[cbIdx] == eip >> CB_BITS)
+            uint64_t cbTag = eip >> CB_BITS;
+            if (criticalityBufferTags[cbIdx] == cbTag && criticalityBuffer[cbIdx] > 8)
             {
-               entry->priority = criticalityBuffer[cbIdx];
-               prioritizeProds(entry, entry->priority, true);
+               entry->priority = 1;
+               //prioritizeProds(entry, entry->priority, true);
             }
          }
-
-         /*for(unsigned int i = 0; i < (uop.getMicroOp()->isStore() ? entry->getNumAddressProducers() : uop.getDependenciesLength()); ++i)
-         {
-            RobEntry *prodEntry = this->findEntryBySequenceNumber(uop.getMicroOp()->isStore() ? entry->getAddressProducer(i) : uop.getDependency(i));
-
-            if (prodEntry->uop->getMicroOp()->getInstruction() && !prodEntry->uop->getMicroOp()->isStore())
-            {
-               entry->prodEips.push_back(prodEntry->uop->getMicroOp()->getInstruction()->getAddress());
-            }
-         }*/
 
          #ifdef DEBUG_PERCYCLE
             std::cout<<"DISPATCH "<<entry->uop->getMicroOp()->toShortString()<<std::endl;
@@ -953,6 +944,16 @@ SubsecondTime RobTimer::doCommit(uint64_t& instructionsExecuted)
          std::cout<<"COMMIT   "<<entry->uop->getMicroOp()->toShortString()<<std::endl;
       #endif
 
+      // Decrement the entry's value in the CB if it has one
+      if (entry->uop->getMicroOp()->getInstruction())
+      {
+         uint64_t eip = entry->uop->getMicroOp()->getInstruction()->getAddress();
+         uint64_t cbIdx = eip & (CB_LENGTH-1);
+         uint64_t cbTag = eip >> CB_BITS;
+         if (criticalityBufferTags[cbIdx] == cbTag && criticalityBuffer[cbIdx] > 0)
+            criticalityBuffer[cbIdx] = criticalityBuffer[cbIdx]-1;
+      }
+
       // Send instructions to loop tracer, in-order, once we know their issue time
       InstructionTracer::uop_times_t times = {
          entry->dispatched,
@@ -986,29 +987,24 @@ SubsecondTime RobTimer::doCommit(uint64_t& instructionsExecuted)
          uint64_t commitStallCycles = now.getCycleCount() - becameFrontAtCycle;
          uint64_t cbIdx = frontEip & (CB_LENGTH-1);
          uint64_t cbTag = frontEip >> CB_BITS;
-         if (criticalityBufferTags[cbIdx] == cbTag && criticalityBuffer[cbIdx] > commitStallCycles)
-            criticalityBuffer[cbIdx] = criticalityBuffer[cbIdx]-1;
-         else
-            criticalityBuffer[cbIdx] = commitStallCycles;
-         criticalityBufferTags[cbIdx] = cbTag;
-         //criticalityBuffer[cbIdx] = commitStallCycles;
-         //criticalityBufferTags[cbIdx] = frontEip >> CB_BITS;
-         //criticalityBuffer[cbIdx] = (criticalityBuffer[cbIdx] > commitStallCycles) ? criticalityBuffer[cbIdx]-1 : commitStallCycles;
-
+         if (commitStallCycles > 1)
+         {
+            uint64_t prevCBValue = (criticalityBufferTags[cbIdx] == cbTag) ? criticalityBuffer[cbIdx]+1 : 0;
+            criticalityBuffer[cbIdx] = prevCBValue + 8;
+            criticalityBufferTags[cbIdx] = cbTag;
+         }
       }
       
       // If the new front of ROB is an instruction, we must save its CB index and the current cycle count
       if (rob.size() > 0 && rob.front().uop->getMicroOp()->getInstruction())
       {
          uint64_t eip = rob.front().uop->getMicroOp()->getInstruction()->getAddress();
-         //cbIdx = eip & (CB_LENGTH-1);
          frontEip = eip;
          becameFrontAtCycle = now.getCycleCount();
       }
       // If the new front of ROB isn't an instruction, we set becameFrontAtCycle to 0 to indicate that current cbIdx isn't valid
       else
       {
-         //cbIdx = 0;
          frontEip = 0;
          becameFrontAtCycle = 0;
       }
