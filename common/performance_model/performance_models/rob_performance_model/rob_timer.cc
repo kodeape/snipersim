@@ -185,7 +185,6 @@ RobTimer::RobTimer(
 
    becameFrontAtCycle = 0;
    frontEip = 0;
-   //cbIdx = 0;
 }
 
 RobTimer::~RobTimer()
@@ -541,7 +540,7 @@ SubsecondTime RobTimer::doDispatch(SubsecondTime **cpiComponent)
             if (criticalityBufferTags[cbIdx] == cbTag && criticalityBuffer[cbIdx] > 8)
             {
                entry->priority = 1;
-               //prioritizeProds(entry, entry->priority, true);
+               prioritizeProds(entry, entry->priority, true);
             }
          }
 
