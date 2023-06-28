@@ -953,6 +953,16 @@ SubsecondTime RobTimer::doCommit(uint64_t& instructionsExecuted)
          std::cout<<"COMMIT   "<<entry->uop->getMicroOp()->toShortString()<<std::endl;
       #endif
 
+      // Decrement the entry's value in the CB if it has one
+      if (entry->uop->getMicroOp()->getInstruction())
+      {
+         uint64_t eip = entry->uop->getMicroOp()->getInstruction()->getAddress();
+         uint64_t cbIdx = eip & (CB_LENGTH-1);
+         uint64_t cbTag = eip >> CB_BITS;
+         if (criticalityBufferTags[cbIdx] == cbTag && criticalityBuffer[cbIdx] > 0)
+            criticalityBuffer[cbIdx] = criticalityBuffer[cbIdx]-1;
+      }
+
       // Send instructions to loop tracer, in-order, once we know their issue time
       InstructionTracer::uop_times_t times = {
          entry->dispatched,
@@ -986,11 +996,14 @@ SubsecondTime RobTimer::doCommit(uint64_t& instructionsExecuted)
          uint64_t commitStallCycles = now.getCycleCount() - becameFrontAtCycle;
          uint64_t cbIdx = frontEip & (CB_LENGTH-1);
          uint64_t cbTag = frontEip >> CB_BITS;
-         if (criticalityBufferTags[cbIdx] == cbTag && criticalityBuffer[cbIdx] > commitStallCycles)
-            criticalityBuffer[cbIdx] = criticalityBuffer[cbIdx]-1;
-         else
-            criticalityBuffer[cbIdx] = commitStallCycles;
-         criticalityBufferTags[cbIdx] = cbTag;
+         if (commitStallCycles > 1)
+         {
+            if (criticalityBufferTags[cbIdx] != cbTag || criticalityBuffer[cbIdx] < commitStallCycles)
+            {
+               criticalityBuffer[cbIdx] = commitStallCycles;
+               criticalityBufferTags[cbIdx] = cbTag;
+            }
+         }
          //criticalityBuffer[cbIdx] = commitStallCycles;
          //criticalityBufferTags[cbIdx] = frontEip >> CB_BITS;
          //criticalityBuffer[cbIdx] = (criticalityBuffer[cbIdx] > commitStallCycles) ? criticalityBuffer[cbIdx]-1 : commitStallCycles;
