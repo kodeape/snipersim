@@ -151,7 +151,6 @@ private:
    uint64_t criticalityBufferTags[CB_LENGTH];
    uint64_t becameFrontAtCycle;
    uint64_t frontEip;
-   //uint64_t cbIdx;
 
    const bool m_mlp_histogram;
    static const unsigned int MAX_OUTSTANDING = 32;

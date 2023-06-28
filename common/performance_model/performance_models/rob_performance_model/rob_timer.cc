@@ -537,9 +537,11 @@ SubsecondTime RobTimer::doDispatch(SubsecondTime **cpiComponent)
             uint64_t eip = uop.getMicroOp()->getInstruction()->getAddress();
             uint64_t cbIdx = eip & (CB_LENGTH-1);
             uint64_t cbTag = eip >> CB_BITS;
-            if (criticalityBufferTags[cbIdx] == cbTag && criticalityBuffer[cbIdx] > 8)
+            //if (criticalityBufferTags[cbIdx] == cbTag && criticalityBuffer[cbIdx] > 8)
+            if (criticalityBufferTags[cbIdx] == cbTag)
             {
-               entry->priority = 1;
+               //entry->priority = 1;
+               entry->priority = criticalityBuffer[cbIdx];
                prioritizeProds(entry, entry->priority, true);
             }
          }
