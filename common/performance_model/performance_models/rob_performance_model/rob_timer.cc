@@ -153,6 +153,16 @@ RobTimer::RobTimer(
       registerStatsMetric("rob_timer", core->getId(), name, &(m_producerInsDistance[i]));
    }
 
+   m_highestCommitStallCycles = 0;
+   registerStatsMetric("rob_timer", core->getId(), "highestCommitStallCycles", &m_highestCommitStallCycles);
+
+   for (unsigned int i = 0; i <= MAX_CS_CYCLES_STAT; i++)
+   {
+      m_commitStallCycles[i] = 0;
+      String name = "commitStallCycles[" + itostr(i) + "]";
+      registerStatsMetric("rob_timer", core->getId(), name, &(m_commitStallCycles[i]));
+   }
+
    if (m_mlp_histogram)
    {
       m_outstandingLoads.resize(HitWhere::NUM_HITWHERES);
@@ -185,7 +195,6 @@ RobTimer::RobTimer(
 
    becameFrontAtCycle = 0;
    frontEip = 0;
-   //cbIdx = 0;
 }
 
 RobTimer::~RobTimer()
@@ -994,6 +1003,13 @@ SubsecondTime RobTimer::doCommit(uint64_t& instructionsExecuted)
       if (becameFrontAtCycle != 0)
       {
          uint64_t commitStallCycles = now.getCycleCount() - becameFrontAtCycle;
+
+         // Update stats tied to commit stall cycles
+         uint64_t stallStatIndex = std::min(commitStallCycles, uint64_t(MAX_CS_CYCLES_STAT));
+         m_commitStallCycles[stallStatIndex]++;
+         if (commitStallCycles > m_highestCommitStallCycles)
+            m_highestCommitStallCycles = commitStallCycles;
+
          uint64_t cbIdx = frontEip & (CB_LENGTH-1);
          uint64_t cbTag = frontEip >> CB_BITS;
          //if (commitStallCycles > 1)
@@ -1014,14 +1030,12 @@ SubsecondTime RobTimer::doCommit(uint64_t& instructionsExecuted)
       if (rob.size() > 0 && rob.front().uop->getMicroOp()->getInstruction())
       {
          uint64_t eip = rob.front().uop->getMicroOp()->getInstruction()->getAddress();
-         //cbIdx = eip & (CB_LENGTH-1);
          frontEip = eip;
          becameFrontAtCycle = now.getCycleCount();
       }
       // If the new front of ROB isn't an instruction, we set becameFrontAtCycle to 0 to indicate that current cbIdx isn't valid
       else
       {
-         //cbIdx = 0;
          frontEip = 0;
          becameFrontAtCycle = 0;
       }

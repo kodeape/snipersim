@@ -14,6 +14,8 @@
 #define CB_BITS   16
 #define CB_LENGTH 65536  // 2^CB_BITS
 
+#define MAX_CS_CYCLES_STAT 500
+
 class RobTimer
 {
 private:
@@ -151,7 +153,9 @@ private:
    uint64_t criticalityBufferTags[CB_LENGTH];
    uint64_t becameFrontAtCycle;
    uint64_t frontEip;
-   //uint64_t cbIdx;
+   
+   uint64_t m_highestCommitStallCycles;
+   uint64_t m_commitStallCycles[MAX_CS_CYCLES_STAT+1];
 
    const bool m_mlp_histogram;
    static const unsigned int MAX_OUTSTANDING = 32;
