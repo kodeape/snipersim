@@ -1012,14 +1012,14 @@ SubsecondTime RobTimer::doCommit(uint64_t& instructionsExecuted)
 
          uint64_t cbIdx = frontEip & (CB_LENGTH-1);
          uint64_t cbTag = frontEip >> CB_BITS;
-         //if (commitStallCycles > 1)
-         //{
+         if (commitStallCycles > 0)
+         {
             if (criticalityBufferTags[cbIdx] != cbTag || criticalityBuffer[cbIdx] < commitStallCycles)
             {
                criticalityBuffer[cbIdx] = commitStallCycles;
                criticalityBufferTags[cbIdx] = cbTag;
             }
-         //}
+         }
          //criticalityBuffer[cbIdx] = commitStallCycles;
          //criticalityBufferTags[cbIdx] = frontEip >> CB_BITS;
          //criticalityBuffer[cbIdx] = (criticalityBuffer[cbIdx] > commitStallCycles) ? criticalityBuffer[cbIdx]-1 : commitStallCycles;
@@ -1032,6 +1032,7 @@ SubsecondTime RobTimer::doCommit(uint64_t& instructionsExecuted)
          uint64_t eip = rob.front().uop->getMicroOp()->getInstruction()->getAddress();
          frontEip = eip;
          becameFrontAtCycle = now.getCycleCount();
+         if (num_committed == commitWidth) becameFrontAtCycle++;
       }
       // If the new front of ROB isn't an instruction, we set becameFrontAtCycle to 0 to indicate that current cbIdx isn't valid
       else
