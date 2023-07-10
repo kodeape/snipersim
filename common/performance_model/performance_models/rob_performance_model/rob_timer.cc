@@ -1012,7 +1012,7 @@ SubsecondTime RobTimer::doCommit(uint64_t& instructionsExecuted)
 
          uint64_t cbIdx = frontEip & (CB_LENGTH-1);
          uint64_t cbTag = frontEip >> CB_BITS;
-         if (commitStallCycles > 0)
+         if (commitStallCycles > 1)
          {
             if (criticalityBufferTags[cbIdx] != cbTag || criticalityBuffer[cbIdx] < commitStallCycles)
             {
