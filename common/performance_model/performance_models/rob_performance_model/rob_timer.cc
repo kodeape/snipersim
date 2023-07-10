@@ -968,7 +968,7 @@ SubsecondTime RobTimer::doCommit(uint64_t& instructionsExecuted)
          uint64_t eip = entry->uop->getMicroOp()->getInstruction()->getAddress();
          uint64_t cbIdx = eip & (CB_LENGTH-1);
          uint64_t cbTag = eip >> CB_BITS;
-         if (criticalityBufferTags[cbIdx] == cbTag && criticalityBuffer[cbIdx] > 0)
+         if (num_committed > 0 && criticalityBufferTags[cbIdx] == cbTag && criticalityBuffer[cbIdx] > 0)
             criticalityBuffer[cbIdx] = criticalityBuffer[cbIdx]-1;
       }
 
@@ -1012,13 +1012,19 @@ SubsecondTime RobTimer::doCommit(uint64_t& instructionsExecuted)
 
          uint64_t cbIdx = frontEip & (CB_LENGTH-1);
          uint64_t cbTag = frontEip >> CB_BITS;
-         if (commitStallCycles > 1)
+         if (commitStallCycles > 0)
          {
-            if (criticalityBufferTags[cbIdx] != cbTag || criticalityBuffer[cbIdx] < commitStallCycles)
+            if (criticalityBufferTags[cbIdx] != cbTag)
+            {
+               criticalityBuffer[cbIdx] = 0;
+               criticalityBufferTags[cbIdx] = cbTag;
+            }
+            criticalityBuffer[cbIdx] += commitStallCycles;
+            /*if (criticalityBufferTags[cbIdx] != cbTag || criticalityBuffer[cbIdx] < commitStallCycles)
             {
                criticalityBuffer[cbIdx] = commitStallCycles;
                criticalityBufferTags[cbIdx] = cbTag;
-            }
+            }*/
          }
          //criticalityBuffer[cbIdx] = commitStallCycles;
          //criticalityBufferTags[cbIdx] = frontEip >> CB_BITS;
