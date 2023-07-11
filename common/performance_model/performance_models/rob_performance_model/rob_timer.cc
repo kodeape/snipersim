@@ -1020,7 +1020,7 @@ SubsecondTime RobTimer::doCommit(uint64_t& instructionsExecuted)
                criticalityBuffer[cbIdx] = 0;
                criticalityBufferTags[cbIdx] = cbTag;
             }
-            criticalityBuffer[cbIdx] += commitStallCycles + 3;
+            criticalityBuffer[cbIdx] += commitStallCycles + 7;
             /*if (criticalityBufferTags[cbIdx] != cbTag || criticalityBuffer[cbIdx] < commitStallCycles)
             {
                criticalityBuffer[cbIdx] = commitStallCycles;
