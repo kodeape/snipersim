@@ -546,7 +546,8 @@ SubsecondTime RobTimer::doDispatch(SubsecondTime **cpiComponent)
          {
             uint64_t eip = uop.getMicroOp()->getInstruction()->getAddress();
             uint64_t cbIdx = eip & (CB_LENGTH-1);
-            if ((criticalityBufferTags[cbIdx] == eip >> CB_BITS) && criticalityBuffer[cbIdx] > 1)
+            uint64_t cbTag = eip >> CB_BITS;
+            if ((criticalityBufferTags[cbIdx] == cbTag) && criticalityBuffer[cbIdx] > 8)
             {
                entry->priority = criticalityBuffer[cbIdx];
                prioritizeProds(entry, entry->priority, true);
@@ -1019,7 +1020,7 @@ SubsecondTime RobTimer::doCommit(uint64_t& instructionsExecuted)
                criticalityBuffer[cbIdx] = 0;
                criticalityBufferTags[cbIdx] = cbTag;
             }
-            criticalityBuffer[cbIdx] += commitStallCycles;
+            criticalityBuffer[cbIdx] += commitStallCycles + 7;
             /*if (criticalityBufferTags[cbIdx] != cbTag || criticalityBuffer[cbIdx] < commitStallCycles)
             {
                criticalityBuffer[cbIdx] = commitStallCycles;
