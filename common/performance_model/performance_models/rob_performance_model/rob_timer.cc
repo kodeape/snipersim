@@ -547,10 +547,11 @@ SubsecondTime RobTimer::doDispatch(SubsecondTime **cpiComponent)
             uint64_t eip = uop.getMicroOp()->getInstruction()->getAddress();
             uint64_t cbIdx = eip & (CB_LENGTH-1);
             uint64_t cbTag = eip >> CB_BITS;
-            if ((criticalityBufferTags[cbIdx] == cbTag) && criticalityBuffer[cbIdx] > 0)
+            if ((criticalityBufferTags[cbIdx] == cbTag) && (criticalityBuffer[cbIdx] >= MIN_CBV_FOR_PRIO))
             {
-               entry->priority = criticalityBuffer[cbIdx];
-               prioritizeProds(entry, entry->priority, true);
+               uint64_t priority = criticalityBuffer[cbIdx];
+               entry->priority = priority;
+               prioritizeProds(entry, priority, true);
             }
          }
 
@@ -963,14 +964,14 @@ SubsecondTime RobTimer::doCommit(uint64_t& instructionsExecuted)
          std::cout<<"COMMIT   "<<entry->uop->getMicroOp()->toShortString()<<std::endl;
       #endif
 
-      // Decrement the entry's value in the CB if it has one
-      if (entry->uop->getMicroOp()->getInstruction())
+      // After the first commit, decrement the committing entry's value in the CB if it has one
+      if (num_committed > 0 && entry->uop->getMicroOp()->getInstruction())
       {
          uint64_t eip = entry->uop->getMicroOp()->getInstruction()->getAddress();
          uint64_t cbIdx = eip & (CB_LENGTH-1);
          uint64_t cbTag = eip >> CB_BITS;
-         if (num_committed > 0 && criticalityBufferTags[cbIdx] == cbTag && criticalityBuffer[cbIdx] > 0)
-            criticalityBuffer[cbIdx] = criticalityBuffer[cbIdx]-1;
+         if (criticalityBufferTags[cbIdx] == cbTag && criticalityBuffer[cbIdx] > 0)
+            criticalityBuffer[cbIdx]--;
       }
 
       // Send instructions to loop tracer, in-order, once we know their issue time
@@ -1020,12 +1021,18 @@ SubsecondTime RobTimer::doCommit(uint64_t& instructionsExecuted)
                criticalityBuffer[cbIdx] = 0;
                criticalityBufferTags[cbIdx] = cbTag;
             }
-            criticalityBuffer[cbIdx] += commitStallCycles + 7;
+            criticalityBuffer[cbIdx] += std::min(CBV_ADD_EACH_CS_CYCLE*commitStallCycles + CBV_ADD_EACH_CS_INSTANCE, MAX_CBV_ADD);
             /*if (criticalityBufferTags[cbIdx] != cbTag || criticalityBuffer[cbIdx] < commitStallCycles)
             {
                criticalityBuffer[cbIdx] = commitStallCycles;
                criticalityBufferTags[cbIdx] = cbTag;
             }*/
+         }
+
+         else
+         {
+            if (criticalityBufferTags[cbIdx] == cbTag && criticalityBuffer[cbIdx] > 0)
+               criticalityBuffer[cbIdx]--;
          }
          //criticalityBuffer[cbIdx] = commitStallCycles;
          //criticalityBufferTags[cbIdx] = frontEip >> CB_BITS;
