@@ -59,6 +59,10 @@ RobTimer::RobTimer(
       , memoryDependencies(new MemoryDependencies())
       , perf(_perf)
       , m_cpiCurrentFrontEndStall(NULL)
+      , m_minCbvForPrio(Sim()->getCfg()->getIntArray("perf_model/core/rob_timer/criticality_buffer/min_cbv_for_prio", core->getId()))
+      , m_cbvAddPerCsInstance(Sim()->getCfg()->getIntArray("perf_model/core/rob_timer/criticality_buffer/cbv_add_per_cs_instance", core->getId()))
+      , m_cbvAddPerCsCycle(Sim()->getCfg()->getIntArray("perf_model/core/rob_timer/criticality_buffer/cbv_add_per_cs_cycle", core->getId()))
+      , m_maxCbvAdd(Sim()->getCfg()->getIntArray("perf_model/core/rob_timer/criticality_buffer/max_cbv_add", core->getId()))
       , m_mlp_histogram(Sim()->getCfg()->getBoolArray("perf_model/core/rob_timer/mlp_histogram", core->getId()))
 {
 
@@ -547,7 +551,7 @@ SubsecondTime RobTimer::doDispatch(SubsecondTime **cpiComponent)
             uint64_t eip = uop.getMicroOp()->getInstruction()->getAddress();
             uint64_t cbIdx = eip & (CB_LENGTH-1);
             uint64_t cbTag = eip >> CB_BITS;
-            if ((criticalityBufferTags[cbIdx] == cbTag) && (criticalityBuffer[cbIdx] >= MIN_CBV_FOR_PRIO))
+            if ((criticalityBufferTags[cbIdx] == cbTag) && (criticalityBuffer[cbIdx] >= m_minCbvForPrio))
             {
                uint64_t priority = criticalityBuffer[cbIdx];
                entry->priority = priority;
@@ -1021,7 +1025,7 @@ SubsecondTime RobTimer::doCommit(uint64_t& instructionsExecuted)
                criticalityBuffer[cbIdx] = 0;
                criticalityBufferTags[cbIdx] = cbTag;
             }
-            criticalityBuffer[cbIdx] += std::min(CBV_ADD_EACH_CS_CYCLE*commitStallCycles + CBV_ADD_EACH_CS_INSTANCE, MAX_CBV_ADD);
+            criticalityBuffer[cbIdx] += std::min(m_cbvAddPerCsCycle*commitStallCycles + m_cbvAddPerCsInstance, m_maxCbvAdd);
             /*if (criticalityBufferTags[cbIdx] != cbTag || criticalityBuffer[cbIdx] < commitStallCycles)
             {
                criticalityBuffer[cbIdx] = commitStallCycles;

@@ -2,13 +2,14 @@
 
 import sys, os, json, sniper_lib
 
-WORKLOADS_DIRECTORY = "/cluster/home/sarargh/sniper_traces/spec_cpu2017_reference_w0_d1B/"
+DEFAULT_RESULTS_DIRECTORY = "/cluster/home/sarargh/sniper/results"
 
-METRICS = (
-    'performance_model.cycle_count',
-    'rob_timer.numContentionBlocks',
-    'rob_timer.numContentionCycles',
-)
+DEFAULT_METRICS = None
+#METRICS = (
+#    'performance_model.cycle_count',
+#    'rob_timer.numContentionBlocks',
+#    'rob_timer.numContentionCycles',
+#)
 
 def get_results(results_dir, metrics=None):
     res = sniper_lib.get_results(resultsdir=results_dir)
@@ -23,22 +24,29 @@ def get_results(results_dir, metrics=None):
     else:
         return results
 
-def get_workloads_results(workloads_dir, metrics):
-    all_results = {}
-    workload_names = os.listdir(workloads_dir)
-    for wl_name in workload_names:
-        all_results[wl_name] = get_results(workloads_dir+wl_name, metrics)
+def get_results_recursive(dir, metrics=None):
+    try:
+        return get_results(dir, metrics)
+    except:
+        results = {}
+        subdirs = os.listdir(dir)
+        for subdir in subdirs:
+            subdir_path = os.path.join(dir, subdir)
+            if os.path.isdir(subdir_path):
+                subresults = get_results_recursive(subdir_path, metrics)
+                if subresults:
+                    results[subdir] = subresults
+        return results
 
-    return all_results
+if __name__ == '__main__':
 
-args = sys.argv
+    args = sys.argv
 
-if len(args) == 1:
-    results = get_workloads_results(WORKLOADS_DIRECTORY, METRICS)
-elif len(args) == 2:
-    results = get_results(args[1])
-else:
-    results = get_results(args[1], args[2:])
+    if len(args) == 1:
+        results = get_results_recursive(DEFAULT_RESULTS_DIRECTORY, DEFAULT_METRICS)
+    elif len(args) == 2:
+        results = get_results_recursive(args[1], DEFAULT_METRICS)
+    else:
+        results = get_results_recursive(args[1], args[2:])
 
-print json.dumps(results, indent=4)
-
+    print json.dumps(results, indent=4)

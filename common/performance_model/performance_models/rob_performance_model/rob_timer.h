@@ -20,7 +20,7 @@
 #define CBV_ADD_EACH_CS_CYCLE 1     // Number to add to an entry's CB value for each cycle it stalls at commit
 #define MAX_CBV_ADD UINT64_MAX      // Maximum total number that can be added to an entry's CB value (per commit)
 
-#define MAX_CS_CYCLES_STAT 500   // Maximum commit stall length that can be registered 
+#define MAX_CS_CYCLES_STAT 500   // Maximum commit stall length that can be registered in commitStallCycles stat
 
 class RobTimer
 {
@@ -159,6 +159,11 @@ private:
    uint64_t criticalityBufferTags[CB_LENGTH];
    uint64_t becameFrontAtCycle;
    uint64_t frontEip;
+
+   uint64_t m_minCbvForPrio;        // Minimum CB value an entry can have to get prioritized
+   uint64_t m_cbvAddPerCsInstance;  // Number to add to an entry's CB value if it stalls at commit
+   uint64_t m_cbvAddPerCsCycle;     // Number to add to an entry's CB value for each cycle it stalls at commit
+   uint64_t m_maxCbvAdd;            // Maximum total number that can be added to an entry's CB value (per commit)
 
    uint64_t m_highestCommitStallCycles;
    uint64_t m_commitStallCycles[MAX_CS_CYCLES_STAT+1];
