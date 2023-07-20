@@ -14,12 +14,6 @@
 #define CB_BITS   16             // Number of bits needed to uniquely address any CB entry (must be a power of 2); log2(CB_LENGTH)
 #define CB_LENGTH UINT16_MAX+1   // Number of entries in the CB (must be a power of 2); 2^CB_BITS
 
-#define MIN_CBV_FOR_PRIO 1       // Minimum CB value an entry can have to get prioritized
-
-#define CBV_ADD_EACH_CS_INSTANCE 7  // Number to add to an entry's CB value if it stalls at commit
-#define CBV_ADD_EACH_CS_CYCLE 1     // Number to add to an entry's CB value for each cycle it stalls at commit
-#define MAX_CBV_ADD UINT64_MAX      // Maximum total number that can be added to an entry's CB value (per commit)
-
 #define MAX_CS_CYCLES_STAT 500   // Maximum commit stall length that can be registered in commitStallCycles stat
 
 class RobTimer
@@ -160,7 +154,8 @@ private:
    uint64_t becameFrontAtCycle;
    uint64_t frontEip;
 
-   uint64_t m_minCbvForPrio;        // Minimum CB value an entry can have to get prioritized
+   uint64_t m_minPriority;    // Minimum priority a prioritized entry can have (entries with lower CBV will have 0 priority)
+   uint64_t m_maxPriority;    // Maximum priority a prioritized entry can have (entries with higher CBV will have max priority)
    uint64_t m_cbvAddPerCsInstance;  // Number to add to an entry's CB value if it stalls at commit
    uint64_t m_cbvAddPerCsCycle;     // Number to add to an entry's CB value for each cycle it stalls at commit
    uint64_t m_maxCbvAdd;            // Maximum total number that can be added to an entry's CB value (per commit)

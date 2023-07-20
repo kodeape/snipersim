@@ -59,7 +59,8 @@ RobTimer::RobTimer(
       , memoryDependencies(new MemoryDependencies())
       , perf(_perf)
       , m_cpiCurrentFrontEndStall(NULL)
-      , m_minCbvForPrio(Sim()->getCfg()->getIntArray("perf_model/core/rob_timer/criticality_buffer/min_cbv_for_prio", core->getId()))
+      , m_minPriority(Sim()->getCfg()->getIntArray("perf_model/core/rob_timer/criticality_buffer/min_priority", core->getId()))
+      , m_maxPriority(Sim()->getCfg()->getIntArray("perf_model/core/rob_timer/criticality_buffer/max_priority", core->getId()))
       , m_cbvAddPerCsInstance(Sim()->getCfg()->getIntArray("perf_model/core/rob_timer/criticality_buffer/cbv_add_per_cs_instance", core->getId()))
       , m_cbvAddPerCsCycle(Sim()->getCfg()->getIntArray("perf_model/core/rob_timer/criticality_buffer/cbv_add_per_cs_cycle", core->getId()))
       , m_maxCbvAdd(Sim()->getCfg()->getIntArray("perf_model/core/rob_timer/criticality_buffer/max_cbv_add", core->getId()))
@@ -551,23 +552,13 @@ SubsecondTime RobTimer::doDispatch(SubsecondTime **cpiComponent)
             uint64_t eip = uop.getMicroOp()->getInstruction()->getAddress();
             uint64_t cbIdx = eip & (CB_LENGTH-1);
             uint64_t cbTag = eip >> CB_BITS;
-            if ((criticalityBufferTags[cbIdx] == cbTag) && (criticalityBuffer[cbIdx] >= m_minCbvForPrio))
+            if ((criticalityBufferTags[cbIdx] == cbTag) && (criticalityBuffer[cbIdx] >= m_minPriority))
             {
-               uint64_t priority = criticalityBuffer[cbIdx];
+               uint64_t priority = std::min(criticalityBuffer[cbIdx], m_maxPriority);
                entry->priority = priority;
                prioritizeProds(entry, priority, true);
             }
          }
-
-         /*for(unsigned int i = 0; i < (uop.getMicroOp()->isStore() ? entry->getNumAddressProducers() : uop.getDependenciesLength()); ++i)
-         {
-            RobEntry *prodEntry = this->findEntryBySequenceNumber(uop.getMicroOp()->isStore() ? entry->getAddressProducer(i) : uop.getDependency(i));
-
-            if (prodEntry->uop->getMicroOp()->getInstruction() && !prodEntry->uop->getMicroOp()->isStore())
-            {
-               entry->prodEips.push_back(prodEntry->uop->getMicroOp()->getInstruction()->getAddress());
-            }
-         }*/
 
          #ifdef DEBUG_PERCYCLE
             std::cout<<"DISPATCH "<<entry->uop->getMicroOp()->toShortString()<<std::endl;
