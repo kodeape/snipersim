@@ -13,7 +13,7 @@ NRUNS=5
 if [ -d "$1" ]; then
   CONFIGS=$(find "$1"/* -name "*.cfg" -maxdepth 0 -type f)
 else
-  CONFIGS=("$1")
+  CONFIGS="$@"
 fi
 
 # Clear/make the results directory

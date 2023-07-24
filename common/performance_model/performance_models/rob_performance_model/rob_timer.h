@@ -154,11 +154,15 @@ private:
    uint64_t becameFrontAtCycle;
    uint64_t frontEip;
 
-   uint64_t m_minPriority;    // Minimum priority a prioritized entry can have (entries with lower CBV will have 0 priority)
-   uint64_t m_maxPriority;    // Maximum priority a prioritized entry can have (entries with higher CBV will have max priority)
-   uint64_t m_cbvAddPerCsInstance;  // Number to add to an entry's CB value if it stalls at commit
-   uint64_t m_cbvAddPerCsCycle;     // Number to add to an entry's CB value for each cycle it stalls at commit
-   uint64_t m_maxCbvAdd;            // Maximum total number that can be added to an entry's CB value (per commit)
+   const uint64_t m_minPriority; // Minimum priority a prioritized entry can have (entries with lower CBV will have 0 priority)
+   const uint64_t m_maxPriority; // Maximum priority a prioritized entry can have (entries with higher CBV will have max priority)
+
+   const uint64_t m_cbvAddPerCsInstance;  // Number to add to an entry's CB value if it stalls at commit
+   const uint64_t m_cbvAddPerCsCycle;     // Number to add to an entry's CB value for each cycle it stalls at commit
+   const uint64_t m_maxCbvAdd;            // Maximum total number that can be added to an entry's CB value (per commit)
+
+   const bool m_discountCsCycleIfCwReached;  // If commit width was reached, delay the stall cycle count of the new ROB head by 1 cycle
+   const bool m_prioritizeProducers;         // Grant entry's producers in IQ the same priority as entry at entry dispatch
 
    uint64_t m_highestCommitStallCycles;
    uint64_t m_commitStallCycles[MAX_CS_CYCLES_STAT+1];

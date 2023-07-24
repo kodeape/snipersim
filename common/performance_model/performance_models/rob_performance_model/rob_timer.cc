@@ -64,6 +64,8 @@ RobTimer::RobTimer(
       , m_cbvAddPerCsInstance(Sim()->getCfg()->getIntArray("perf_model/core/rob_timer/criticality_buffer/cbv_add_per_cs_instance", core->getId()))
       , m_cbvAddPerCsCycle(Sim()->getCfg()->getIntArray("perf_model/core/rob_timer/criticality_buffer/cbv_add_per_cs_cycle", core->getId()))
       , m_maxCbvAdd(Sim()->getCfg()->getIntArray("perf_model/core/rob_timer/criticality_buffer/max_cbv_add", core->getId()))
+      , m_discountCsCycleIfCwReached(Sim()->getCfg()->getBoolArray("perf_model/core/rob_timer/criticality_buffer/discount_cs_cycle_if_cw_reached", core->getId()))
+      , m_prioritizeProducers(Sim()->getCfg()->getBoolArray("perf_model/core/rob_timer/criticality_buffer/prioritize_producers", core->getId()))
       , m_mlp_histogram(Sim()->getCfg()->getBoolArray("perf_model/core/rob_timer/mlp_histogram", core->getId()))
 {
 
@@ -556,7 +558,7 @@ SubsecondTime RobTimer::doDispatch(SubsecondTime **cpiComponent)
             {
                uint64_t priority = std::min(criticalityBuffer[cbIdx], m_maxPriority);
                entry->priority = priority;
-               prioritizeProds(entry, priority, true);
+               if (m_prioritizeProducers) prioritizeProds(entry, priority, true);
             }
          }
 
@@ -1017,11 +1019,6 @@ SubsecondTime RobTimer::doCommit(uint64_t& instructionsExecuted)
                criticalityBufferTags[cbIdx] = cbTag;
             }
             criticalityBuffer[cbIdx] += std::min(m_cbvAddPerCsCycle*commitStallCycles + m_cbvAddPerCsInstance, m_maxCbvAdd);
-            /*if (criticalityBufferTags[cbIdx] != cbTag || criticalityBuffer[cbIdx] < commitStallCycles)
-            {
-               criticalityBuffer[cbIdx] = commitStallCycles;
-               criticalityBufferTags[cbIdx] = cbTag;
-            }*/
          }
 
          else
@@ -1029,19 +1026,15 @@ SubsecondTime RobTimer::doCommit(uint64_t& instructionsExecuted)
             if (criticalityBufferTags[cbIdx] == cbTag && criticalityBuffer[cbIdx] > 0)
                criticalityBuffer[cbIdx]--;
          }
-         //criticalityBuffer[cbIdx] = commitStallCycles;
-         //criticalityBufferTags[cbIdx] = frontEip >> CB_BITS;
-         //criticalityBuffer[cbIdx] = (criticalityBuffer[cbIdx] > commitStallCycles) ? criticalityBuffer[cbIdx]-1 : commitStallCycles;
-
       }
       
-      // If the new front of ROB is an instruction, we must save its CB index and the current cycle count
+      // If the new front of ROB is an instruction, we must save its address and the current cycle count
       if (rob.size() > 0 && rob.front().uop->getMicroOp()->getInstruction())
       {
          uint64_t eip = rob.front().uop->getMicroOp()->getInstruction()->getAddress();
          frontEip = eip;
          becameFrontAtCycle = now.getCycleCount();
-         if (num_committed == commitWidth) becameFrontAtCycle++;
+         if (m_discountCsCycleIfCwReached && (num_committed == commitWidth)) becameFrontAtCycle++;
       }
       // If the new front of ROB isn't an instruction, we set becameFrontAtCycle to 0 to indicate that current cbIdx isn't valid
       else
